@@ -44,8 +44,12 @@
       (query-model* model options ...
                     (compile-query-dynamic query)))]))
 
+(define (i/query-model) #f)
+(define (i/:-) #f)
+
 (provide define-model
          query-model
-         query-model-dynamic
          :-
+         i/query-model
+         i/:-
          model?)
