@@ -13,6 +13,7 @@
 
 (define-struct model (rules))
 (define-struct query ())
+; i.e. sexpr-query is a subtype of query, as is fun-query
 (define-struct (sexpr-query query) (se))
 (define-struct (fun-query query) (f args))
 
@@ -236,5 +237,12 @@
    [(_ query)
     (syntax/loc stx
       (make-sexpr-query 'query))]))
+
+(define (i/query se)
+  (match se
+    [(list-rest racket-pred args)
+     (make-fun-query (λ () #f) '())]
+    ; this seems to be correct
+    [_ (make-sexpr-query se)]))
 
 (provide (all-defined-out))
