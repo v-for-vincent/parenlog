@@ -128,34 +128,44 @@
          (lambda (model env query)
            (define var (gensym 'var))
            ...
+           ; this is fine even if query contains multiple conjuncts
+           ; it'll only unify matching pairs
            (define new-env (unify env head-sans-vars query))         
            (generator
             () ; these are the formal parameters - there are none
             (when new-env
               (let ([body-sans-vars (list body-query-sans-vars ...)])
+                ; this whole thing yields environments (instead of just answer substitutions)
                 (reyield yield (model-env-generator/queries model new-env body-sans-vars))))
             (yield generator-done)))))]))
 
 (define (rule-env-generator m r env q)
   (r m env q))
 
+; note: reyield is *syntax*, yield is a *procedure*
+; so this is just syntax to say that the generator g should be exhausted
 (define-syntax-rule (reyield yield g)
   (for ([ans (in-producer g generator-done)])
     (yield ans)))
 
+; a generator function which generates environments from a model and a conjunction
 (define (model-env-generator/queries m env qs)
   (generator
    ()
    (match qs
      [(list) (yield env)]
      [(list-rest q1 qs)
+      ; gets the answers for the first conjunct, combines them with the recursively obtained answers for the second, third,... conjuncts
       (for ([new-env (in-producer (model-env-generator m env q1) generator-done)])
         (reyield yield (model-env-generator/queries m new-env qs)))])
    (yield generator-done)))
 
+; generates the answers to a single query
 (define (model-env-generator m env first-query)
   (generator
    ()
+   ; query can be a regular S-expression (just a Prolog goal)
+   ; or it can be a Racket predicate
    (match first-query
      [(struct sexpr-query (q-se))
       (for ([rule (in-list (model-rules m))])
@@ -165,6 +175,7 @@
         (yield env))])
    (yield generator-done)))
 
+; recursively finds the value bound to variable v
 (define (env-deref env v)
   (cond
     [(bound-variable? env v)
@@ -174,11 +185,13 @@
     [else
      v]))
 
+; restricts the environment to the variables in the list l
 (define (env-restrict env l)
   (for/hasheq ([(k v) (in-hash env)]
                #:when (member k l))
     (values k (env-deref env v))))
 
+; makes a list of all the variables in a query
 (define (variables-in q)
   (match q
     [(? variable? v) (list v)]
@@ -190,6 +203,7 @@
     [(? list? l)
      (append-map variables-in l)]))
 
+; generates answers to one query
 (define (query-answer-generator m q)
   (define init-vars (variables-in q))
   (generator
@@ -199,6 +213,11 @@
      (yield (env-restrict ans init-vars)))
    (yield generator-done)))
 
+; this is like zipping the range and the answer set together
+; producer can be a generator, which gives a form of lazy evaluation
+; this expects the queries to already be compiled (query-model in expander does not)
+; the assumption seems to be that q is atomic
+; both the code and the documentation make it clear that q should be a single s-expression
 (define (query-model* m q #:limit [limit +inf.0])
   (for/list ([ans (in-producer (query-answer-generator m q) generator-done)]
              [i (in-range limit)])
