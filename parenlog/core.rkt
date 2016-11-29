@@ -231,19 +231,18 @@
 (define-syntax (compile-query stx)
   (syntax-parse
    stx #:literals (unquote)
-   [(_ ((unquote f) arg ...))
+   [(_ ((unquote f) arg ...)) ; doesn't matter here if f is "bare" or a parenthesized expression
     (syntax/loc stx
                 (make-fun-query f (list 'arg ...)))]
    [(_ query)
     (syntax/loc stx
       (make-sexpr-query 'query))]))
 
-(define (i/query se)
+(define (i/query se) ; examples: '(parent nethack slashem) ; (,(compose not equal?) X Y))
   (match se
-    ; racket-pred should be something like ,(blah blah blah) or just ,blah
     [(list-rest racket-pred args)
-     (make-fun-query (λ () #f) args)]
-    ; this seems to be correct
+     #:when (procedure? racket-pred)
+     (make-fun-query racket-pred args)]
     [_ (make-sexpr-query se)]))
 
 (provide (all-defined-out))
