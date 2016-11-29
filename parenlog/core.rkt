@@ -240,8 +240,9 @@
 
 (define (i/query se)
   (match se
+    ; racket-pred should be something like ,(blah blah blah) or just ,blah
     [(list-rest racket-pred args)
-     (make-fun-query (λ () #f) '())]
+     (make-fun-query (λ () #f) args)]
     ; this seems to be correct
     [_ (make-sexpr-query se)]))
 
