@@ -191,14 +191,4 @@
     (syntax/loc stx
       (make-sexpr-query 'query))]))
 
-(define-syntax (compile-query-dynamic stx)
-  (syntax-parse
-   stx #:literals (unquote)
-   [(_ ((unquote f) arg ...))
-    (syntax/loc stx
-                (make-fun-query f (list arg ...)))]
-   [(_ query)
-    (syntax/loc stx
-      (make-sexpr-query query))]))
-
 (provide (all-defined-out))
