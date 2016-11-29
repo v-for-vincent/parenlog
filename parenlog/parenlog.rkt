@@ -1,7 +1,10 @@
 #lang racket/base
 (require (for-syntax racket/base
                      syntax/parse)
+         (only-in racket/function curry)
          "core.rkt")
+
+; TODO move comments to proper docs
 
 (define-syntax (:- stx)
   (raise-syntax-error ':- "Cannot be used outside define-model" stx))
@@ -36,12 +39,14 @@
       (query-model* model options ...
                     (compile-query query)))]))
 
-(define (i/query-model) #f)
-(define (i/:-) #f)
+(define (i/model ses) ; ses is supplied as a *list* of S-expressions, so we only have to quote one thing
+  (make-model (map i/rule ses)))
 
 (provide define-model
          query-model
          :-
-         i/query-model
-         i/:-
+         i/model
+         i/query
+         query-model*
+         i/rule
          model?)

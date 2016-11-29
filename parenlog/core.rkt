@@ -139,6 +139,10 @@
                 (reyield yield (model-env-generator/queries model new-env body-sans-vars))))
             (yield generator-done)))))]))
 
+(define (i/rule se)
+  (lambda (model env query)
+    (yield generator-done)))
+
 (define (rule-env-generator m r env q)
   (r m env q))
 
