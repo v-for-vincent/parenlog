@@ -16,6 +16,7 @@
 (define-struct (sexpr-query query) (se))
 (define-struct (fun-query query) (f args))
 
+; env seems to contain bindings for variables
 (define (unbound-variable? env q1)
   (and (variable? q1)
        (not (hash-has-key? env q1))))
@@ -29,6 +30,7 @@
     [(equal? q1 q2)
      env]
     [(unbound-variable? env q1)
+     ; functional update of the bindings so far
      (hash-set env q1 q2)]
     [(unbound-variable? env q2)
      (hash-set env q2 q1)]
@@ -42,6 +44,7 @@
             (unify new-env (cdr q1) (cdr q2))))]
     [else #f]))
 
+; this is just a guard value, generated when Python would throw an exception
 (define generator-done
   (local [(define-struct uniq ())]
     (make-uniq)))
