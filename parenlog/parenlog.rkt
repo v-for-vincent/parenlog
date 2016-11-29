@@ -36,14 +36,6 @@
       (query-model* model options ...
                     (compile-query query)))]))
 
-(define-syntax (query-model-dynamic stx)
-  (syntax-parse 
-   stx
-   [(_ model:expr options ... query)
-    (syntax/loc stx
-      (query-model* model options ...
-                    (compile-query-dynamic query)))]))
-
 (define (i/query-model) #f)
 (define (i/:-) #f)
 

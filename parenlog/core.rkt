@@ -30,7 +30,8 @@
     [(equal? q1 q2)
      env]
     [(unbound-variable? env q1)
-     ; functional update of the bindings so far
+     ; unification is functional update of the bindings so far
+     ; does not return a substitution like my version, but does add the same info to the data so far
      (hash-set env q1 q2)]
     [(unbound-variable? env q2)
      (hash-set env q2 q1)]
@@ -49,6 +50,9 @@
   (local [(define-struct uniq ())]
     (make-uniq)))
 
+; rewrites S-expression syntax
+; quotes identifiers other than variables
+; so I think the idea is that it no longer contains *Racket* variables (unless they look like Prolog variables)
 (define-for-syntax (rewrite-se stx)
   (cond
     [(identifier? stx)
@@ -56,14 +60,18 @@
          stx
          (quasisyntax/loc stx (quote #,stx)))]
     [(syntax->list stx)
+     ; the following lambda will be applied to the result of syntax->list because of =>
      => (lambda (stxs)
           (quasisyntax/loc stx
             (list #,@(map rewrite-se stxs))))]
     [else
      stx]))
 
+; the body can contain Racket expressions, introduced using the unquote operator
+; this is more or less like applying rewrite-se, but taking into account unquote and turning the body into a query
+; looks like there are two types: fun-query (for Racket calls) and sexpr-query (for regular Prolog queries)
 (define-for-syntax (rewrite-body-query stx)
-  (syntax-case stx (unquote)
+  (syntax-case stx (unquote) ; unquote is a literal which occurs in the syntax
     [((unquote f) arg ...)
      (quasisyntax/loc stx
        (make-fun-query f #,(rewrite-se #'(arg ...))))]
@@ -71,6 +79,10 @@
      (quasisyntax/loc stx
        (make-sexpr-query #,(rewrite-se stx)))]))
 
+; puts (Prolog) variable syntaxes in a list of single-element lists
+; used to rename clauses?
+; variables get wrapped in lists due to how compile-rule works
+; uses with-syntax [(var ...)]
 (define-for-syntax (extract-se stx)
   (cond
     [(identifier? stx)
@@ -82,6 +94,7 @@
     [else
      empty]))
 
+; see above and below
 (define-for-syntax (extract-body stx)
   (syntax-case stx (unquote)
     [((unquote f) arg ...)
@@ -89,6 +102,8 @@
     [_
      (extract-se stx)]))
 
+; gets the S-expression syntaxes for variables
+; different for body and head because body may also contain Racket predicates
 (define-for-syntax (extract-vars head-stx body-stxs)
   (remove-duplicates
    (flatten
@@ -96,6 +111,11 @@
           (map extract-body body-stxs)))
    #:key syntax-e))
 
+; rules are compiled to functions that take a model, an environment and a query
+; the downside is that compiled rules cannot be abstracted anymore
+; also, this is a syntax transformation
+; is it possible to either retain the S-expressions, or to compile to a concrete rule structure?
+; the latter would be transformed into a generator function at runtime
 (define-syntax (compile-rule stx)
   (syntax-case stx ()
     [(_ head body-query ...)
@@ -110,7 +130,7 @@
            ...
            (define new-env (unify env head-sans-vars query))         
            (generator
-            ()
+            () ; these are the formal parameters - there are none
             (when new-env
               (let ([body-sans-vars (list body-query-sans-vars ...)])
                 (reyield yield (model-env-generator/queries model new-env body-sans-vars))))
