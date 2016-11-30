@@ -77,14 +77,20 @@
 ; this is more or less like applying rewrite-se, but taking into account unquote and turning the body into a query
 ; looks like there are two types: fun-query (for Racket calls) and sexpr-query (for regular Prolog queries)
 (define-for-syntax (rewrite-body-query stx)
-  (syntax-case stx (unquote) ; unquote is a literal which occurs in the syntax
+  (syntax-parse stx #:literals (unquote) ; unquote is a literal which occurs in the syntax
     [((unquote f) arg ...)
      (begin
        (quasisyntax/loc stx
          (make-fun-query f #,(rewrite-se #'(arg ...)))))]
-    [_
+    [(symbol:identifier _ ...)
+     (begin
+       (print "rewriting S-expr query")
+       (print stx)
+       (quasisyntax/loc stx
+         (make-sexpr-query #,(rewrite-se stx))))]
+    [(proc arg ...)
      (quasisyntax/loc stx
-       (make-sexpr-query #,(rewrite-se stx)))]))
+       (make-fun-query (eval-syntax proc) #,(rewrite-se #'(arg ...))))]))
 
 ; puts (Prolog) variable syntaxes in a list of single-element lists
 ; used to rename clauses?
