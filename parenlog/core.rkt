@@ -65,6 +65,11 @@
      => (lambda (stxs)
           (quasisyntax/loc stx
             (list #,@(map rewrite-se stxs))))]
+    [(procedure? (eval-syntax stx))
+     (begin
+       (print "procedure!")
+       (print stx)
+       stx)]
     [else
      stx]))
 
@@ -74,8 +79,9 @@
 (define-for-syntax (rewrite-body-query stx)
   (syntax-case stx (unquote) ; unquote is a literal which occurs in the syntax
     [((unquote f) arg ...)
-     (quasisyntax/loc stx
-       (make-fun-query f #,(rewrite-se #'(arg ...))))]
+     (begin
+       (quasisyntax/loc stx
+         (make-fun-query f #,(rewrite-se #'(arg ...)))))]
     [_
      (quasisyntax/loc stx
        (make-sexpr-query #,(rewrite-se stx)))]))
@@ -118,7 +124,6 @@
 ; is it possible to either retain the S-expressions, or to compile to a concrete rule structure?
 ; the latter would be transformed into a generator function at runtime
 (define-syntax (compile-rule stx)
-  (print stx)
   (syntax-case stx ()
     [(_ head body-query ...)
      ; note: all this is written for *syntax*, so keep that in mind
@@ -240,13 +245,13 @@
 
 (define-syntax (compile-query stx)
   (syntax-parse
-   stx #:literals (unquote)
-   [(_ ((unquote f) arg ...)) ; doesn't matter here if f is "bare" or a parenthesized expression
-    (syntax/loc stx
-                (make-fun-query f (list 'arg ...)))]
-   [(_ query)
-    (syntax/loc stx
-      (make-sexpr-query 'query))]))
+      stx #:literals (unquote)
+    [(_ ((unquote f) arg ...)) ; doesn't matter here if f is "bare" or a parenthesized expression
+     (syntax/loc stx
+       (make-fun-query f (list 'arg ...)))]
+    [(_ query)
+     (syntax/loc stx
+       (make-sexpr-query 'query))]))
 
 (define (i/query qse) ; examples: '(parent nethack slashem) ; `(,(compose not equal?) X Y))
   (match qse
