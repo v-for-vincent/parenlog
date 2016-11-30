@@ -90,7 +90,7 @@
          (make-sexpr-query #,(rewrite-se stx))))]
     [(proc arg ...)
      (quasisyntax/loc stx
-       (make-fun-query (eval-syntax proc) #,(rewrite-se #'(arg ...))))]))
+       (make-fun-query proc #,(rewrite-se #'(arg ...))))]))
 
 ; puts (Prolog) variable syntaxes in a list of single-element lists
 ; used to rename clauses?
