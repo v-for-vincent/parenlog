@@ -120,6 +120,8 @@
 (define-syntax (compile-rule stx)
   (syntax-case stx ()
     [(_ head body-query ...)
+     ; note: all this is written for *syntax*, so keep that in mind
+     ; this means unify expects syntax, as well
      (with-syntax ([(var ...) (extract-vars #'head (syntax->list #'(body-query ...)))]
                    [head-sans-vars (rewrite-se #'head)]
                    [(body-query-sans-vars ...) 
@@ -140,9 +142,11 @@
                 (reyield yield (model-env-generator/queries model new-env body-sans-vars))))
             (yield generator-done)))))]))
 
-(define (i/rule se)
-  (lambda (model env query)
-    (yield generator-done)))
+(define (i/rule qse)
+  (match qse
+    [(list-rest ':- rest)
+     (with-syntax ([(rest-stx ...) (syntax->list (datum->syntax #f rest))])
+       (eval-syntax #'(compile-rule rest-stx ...)))]))
 
 (define (rule-env-generator m r env q)
   (r m env q))
@@ -238,11 +242,11 @@
     (syntax/loc stx
       (make-sexpr-query 'query))]))
 
-(define (i/query se) ; examples: '(parent nethack slashem) ; (,(compose not equal?) X Y))
-  (match se
+(define (i/query qse) ; examples: '(parent nethack slashem) ; `(,(compose not equal?) X Y))
+  (match qse
     [(list-rest racket-pred args)
      #:when (procedure? racket-pred)
      (make-fun-query racket-pred args)]
-    [_ (make-sexpr-query se)]))
+    [_ (make-sexpr-query qse)]))
 
 (provide (all-defined-out))
