@@ -118,6 +118,7 @@
 ; is it possible to either retain the S-expressions, or to compile to a concrete rule structure?
 ; the latter would be transformed into a generator function at runtime
 (define-syntax (compile-rule stx)
+  (print stx)
   (syntax-case stx ()
     [(_ head body-query ...)
      ; note: all this is written for *syntax*, so keep that in mind
@@ -142,10 +143,15 @@
                 (reyield yield (model-env-generator/queries model new-env body-sans-vars))))
             (yield generator-done)))))]))
 
-(define (i/rule qse)
+
+(define (i/rule qse ctxt)
   (match qse
     [(list-rest ':- rest)
-     (with-syntax ([(rest-stx ...) (syntax->list (datum->syntax #f rest))])
+     ; moeilijkheid: datum->syntax kan niet omdat we niet louter datums hebben
+     ; meestal wel, maar in geval van unquote hebben we bound identifiers
+     ; dan mag datum->syntax niet
+     ; 
+     (with-syntax ([(rest-stx ...) (syntax->list (datum->syntax ctxt rest))])
        (eval-syntax #'(compile-rule rest-stx ...)))]))
 
 (define (rule-env-generator m r env q)

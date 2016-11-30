@@ -45,7 +45,9 @@
     (match qse
       [(list-rest ':- rest) qse]
       [_ (list ':- qse)]))
-  (make-model (map (compose i/rule wrap-fact) ses)))
+  (define ctxt #'different?)
+  (define wrapped-ses (map wrap-fact ses))
+  (make-model (map (λ (wse) (i/rule wse ctxt)) wrapped-ses)))
 
 (provide define-model
          query-model
@@ -55,3 +57,23 @@
          query-model*
          i/rule
          model?)
+
+(define different? (compose not equal?))
+(define my-model (i/model `((parent rogue moria)
+                            (parent rogue larn)
+                            (parent rogue omega)
+                            (parent rogue hack)
+                            (parent moria angband)
+                            (parent hack nethack)
+                            (parent angband tome)
+                            (parent angband zangband)
+                            (parent omega adom)
+                            (parent nethack adom)
+                            (parent nethack zapm)
+                            (parent nethack slashem)
+                            (parent nethack crawl)
+                            (:- (sibling X Y)
+                                (parent Z X)
+                                (parent Z Y)
+                                (,different? X Y)))))
+(query-model* my-model (i/query '(sibling X Y)))
